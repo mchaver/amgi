@@ -1,0 +1,15 @@
+[package]
+name = "quiz"
+version = "0.1.0"
+authors = ["James Haver <mchaver@gmail.com>"]
+
+[dependencies]
+rand = "0.3.17"
+rusqlite = "0.12.0"
+term = "0.4.6"
+text_io = "0.1.6"
+time = "0.1.38"
+
+[lib]
+name = "quizlib"
+path = "src/quizlib/lib.rs"
