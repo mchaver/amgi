@@ -4,6 +4,7 @@
 cargo build
 cargo run --bin app
 cargo run --bin migrate
+cargo test
 ```
 
 ## References

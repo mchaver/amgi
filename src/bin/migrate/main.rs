@@ -28,14 +28,16 @@ fn main() {
     conn.execute("CREATE TABLE onyomi (
                   id              INTEGER PRIMARY KEY,
                   onyomi          TEXT NOT NULL,
-                  kanjiid         INTEGER,
+                  okurigana_index INTEGER NOT NULL,
+                  kanjiid         INTEGER NOT NULL,
                   FOREIGN KEY(kanjiid) REFERENCES kanji(id)
                   )", &[]).unwrap();
 
     conn.execute("CREATE TABLE kunyomi (
                   id              INTEGER PRIMARY KEY,
-                  kunyomi          TEXT NOT NULL,
-                  kanjiid         INTEGER,
+                  kunyomi         TEXT NOT NULL,
+                  okurigana_index INTEGER NOT NULL,
+                  kanjiid         INTEGER NOT NULL,
                   FOREIGN KEY(kanjiid) REFERENCES kanji(id)
                   )", &[]).unwrap();
     
