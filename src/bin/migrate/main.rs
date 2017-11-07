@@ -7,6 +7,8 @@ use rusqlite::Connection;
 use std::io::{BufReader,BufRead};
 use std::fs::File;
 
+use rusqlite::types::Value::Null;
+
 fn main() {
     let file = File::open("pronunciation.txt").unwrap();
     let mut kanjis : Vec<quizlib::Kanji> = vec![];
@@ -28,30 +30,81 @@ fn main() {
     conn.execute("CREATE TABLE onyomi (
                   id              INTEGER PRIMARY KEY,
                   onyomi          TEXT NOT NULL,
-                  okurigana_index INTEGER NOT NULL,
-                  kanjiid         INTEGER NOT NULL,
-                  FOREIGN KEY(kanjiid) REFERENCES kanji(id)
+                  kanji_id        INTEGER NOT NULL,
+                  FOREIGN KEY(kanji_id) REFERENCES kanji(id)
                   )", &[]).unwrap();
 
     conn.execute("CREATE TABLE kunyomi (
                   id              INTEGER PRIMARY KEY,
                   kunyomi         TEXT NOT NULL,
-                  okurigana_index INTEGER NOT NULL,
-                  kanjiid         INTEGER NOT NULL,
-                  FOREIGN KEY(kanjiid) REFERENCES kanji(id)
+                  okurigana_index INTEGER,
+                  kanji_id        INTEGER NOT NULL,
+                  FOREIGN KEY(kanji_id) REFERENCES kanji(id)
                   )", &[]).unwrap();
     
     for kanji in kanjis {
         conn.execute("INSERT INTO kanji (kanji) VALUES (?1)", &[&kanji.kanji]).unwrap();
-        let kanjiid = conn.last_insert_rowid();
+        let kanji_id = conn.last_insert_rowid();
         for onyomi in kanji.onyomis {
-            conn.execute("INSERT INTO onyomi (onyomi,kanjiid) VALUES (?1,?2)", &[&onyomi, &kanjiid]).unwrap();
+            conn.execute("INSERT INTO onyomi (onyomi,kanji_id) VALUES (?1,?2)", &[&onyomi, &kanji_id]).unwrap();
         }
         for kunyomi in kanji.kunyomis {
-            conn.execute("INSERT INTO kunyomi (kunyomi,kanjiid) VALUES (?1,?2)", &[&kunyomi, &kanjiid]).unwrap();
+            let mut oi = 0;
+            //"Program".chars().position(|c| c == 'g').unwrap()
+            // kunyomi.find('・')
+            match kunyomi.chars().position(|c| c == '・') {
+                Some(okurigana_index) => {
+                    let split_on_dot : Vec<String> = kunyomi.split("・").map(|s| s.to_string()).collect();
+                    let without_dot = split_on_dot.join("");
+                    oi = okurigana_index as u32;
+                    conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&without_dot, &oi, &kanji_id]).unwrap();
+                },
+                None => {
+                    conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&kunyomi, &Null, &kanji_id]).unwrap();
+                },
+            }
+            // conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&kunyomi, &Null, &kanji_id]).unwrap();
+            //conn.execute("INSERT INTO kunyomi (kunyomi,kanji_id) VALUES (?1,?2)", &[&kunyomi, &kanji_id]).unwrap();
         }
     }
-
-    //let s: String = read!("{}");
-    //println!("{}", s);
 }
+
+struct KanjiRow {
+    id: i32,
+    kanji: String,
+    onyomi: Option<String>,
+    kunyomi: Option<String>
+}
+
+
+fn getKanjis(conn: Connection) {
+    let mut stmt = conn.prepare("SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
+").unwrap();
+
+    let kanji_rows = stmt.query_map(&[], |row| {
+        KanjiRow {
+            id: row.get(0),
+            kanji: row.get(1),
+            onyomi:
+            match row.get_checked(2) {
+                Ok(s) => Some(s),
+                Err(_) => None,
+            },
+            kunyomi:
+            match row.get_checked(3) {
+                Ok(s) => Some(s),
+                Err(_) => None,
+            },
+        }
+    }).unwrap();
+    
+    //for kanji_row in kanji_rows {
+    // mutable hashmap of kanji string to kanji
+    //}
+}
+
+
+// rusqlite::types::Null
+// SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanjiid;
+
+// SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
