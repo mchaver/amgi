@@ -73,12 +73,12 @@ struct KanjiRow {
     id: i32,
     kanji: String,
     onyomi: Option<String>,
-    kunyomi: Option<String>
+    kunyomi: Option<(String,Option<u32>)>
 }
 
 
 fn getKanjis(conn: Connection) {
-    let mut stmt = conn.prepare("SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
+    let mut stmt = conn.prepare("SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi, kunyomi.okurigana_index FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
 ").unwrap();
 
     let kanji_rows = stmt.query_map(&[], |row| {
@@ -92,7 +92,10 @@ fn getKanjis(conn: Connection) {
             },
             kunyomi:
             match row.get_checked(3) {
-                Ok(s) => Some(s),
+                Ok(s) => match row.get_checked(4) {
+                    Ok(okurigana_index) => Some((s,Some(okurigana_index))),
+                    Err(_) => Some((s,None)),
+                },
                 Err(_) => None,
             },
         }
@@ -105,6 +108,9 @@ fn getKanjis(conn: Connection) {
 
 
 // rusqlite::types::Null
-// SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanjiid;
+// SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
 
 // SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
+
+// query for kunyomi with okurigana
+// SELECT kanji.id, kanji.kanji, kunyomi.kunyomi, kunyomi.okurigana_index FROM kanji LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id WHERE kunyomi.okurigana_index IS NOT NULL;
