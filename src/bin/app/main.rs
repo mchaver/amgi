@@ -32,8 +32,14 @@ fn main() {
 
     let conn = Connection::open("test.sql").unwrap();
     let kanjis = get_kanjis(conn);
+//    let ks = get_kanji_with_okurigana(conn);
 
     println!("{:?}", kanjis);
+
+    for kanji in kanjis {
+        learn_kanji(&kanji);
+    }
+//    println!("{:?}", ks);
 /*    
     let mkanjis = quizlib::get_kanji("pronunciation.txt");
     let kanjis = mkanjis.unwrap();
@@ -43,6 +49,22 @@ fn main() {
         quiz_kanji(k);
     }
 */
+}
+
+fn learn_kanji(kanji: &quizlib::Kanji) {
+    println!("{} onyomi: ", kanji.kanji);
+    
+    for onyomi in kanji.onyomis.iter() {
+        println!("{}", onyomi);
+        let mut correct = 0;
+        while correct < 5 {
+            let onyomi_read: String = read!("{}\n");
+            if quizlib::romaji_to_katakana(onyomi_read.trim()) == onyomi.to_string() {
+                correct += 1;
+            }
+        }
+    }
+
 }
 
 fn print_kanji(kanji: &quizlib::Kanji) {
@@ -59,7 +81,7 @@ fn print_kanji(kanji: &quizlib::Kanji) {
     println!("kunyomi:");
     t.fg(term::color::BRIGHT_BLUE).unwrap();
     for kunyomi in kanji.kunyomis.iter() {
-        writeln!(t, "{}", kunyomi).unwrap();
+        writeln!(t, "{}", kunyomi.0).unwrap();
     }
 
     t.reset().unwrap();
@@ -88,10 +110,12 @@ fn quiz_kanji(kanji: &quizlib::Kanji) {
     
     let kunyomi_read: String = read!("{}\n");
     let kunyomi_answers: Vec<String> = kunyomi_read.trim().split_whitespace().map(|s| quizlib::romaji_to_hiragana(s)).collect();
+    let kunyomi_strings: Vec<String> = kanji.kunyomis.iter().map(|s| s.0.clone()).collect();
     println!("");
+
     
     for kunyomi in kunyomi_answers.iter() {
-        if kanji.kunyomis.contains(&kunyomi.to_string()) {
+        if kunyomi_strings.contains(&kunyomi.to_string()) {
             correct.push(kunyomi.to_string());
         } else {
             incorrect.push(kunyomi.to_string());
@@ -104,7 +128,7 @@ fn quiz_kanji(kanji: &quizlib::Kanji) {
         }
     }
 
-    for kunyomi in kanji.kunyomis.iter() {
+    for kunyomi in kunyomi_strings.iter() {
         if !kunyomi_answers.contains(&kunyomi) {
             missed.push(kunyomi.to_string());
         }
@@ -158,10 +182,9 @@ struct KanjiRow {
 }
 
 
-fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
-    let mut stmt = conn.prepare("SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi, kunyomi.okurigana_index FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
-").unwrap();
-    let mut kanjis : HashMap <String, quizlib::Kanji> = HashMap::new();
+
+fn get_kanji_with_okurigana(conn: Connection) -> Vec<quizlib::Kanji> {
+    let mut stmt = conn.prepare("SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi, kunyomi.okurigana_index FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id WHERE kunyomi.okurigana_index IS NOT NULL;").unwrap();
     let kanji_rows : Vec<KanjiRow> = stmt.query_map(&[], |row| {
         KanjiRow {
             id: row.get(0),
@@ -181,7 +204,76 @@ fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
             },
         }
     }).unwrap().map(|x| x.unwrap()).collect();
+    kanji_rows_to_kanjis(kanji_rows)
+}
 
+
+fn kanji_rows_to_kanjis(kanji_rows: Vec<KanjiRow>) -> Vec<quizlib::Kanji> {
+    let mut kanjis : HashMap <String, quizlib::Kanji> = HashMap::new();
+    for kanji_row in kanji_rows {
+        match kanjis.get(&kanji_row.kanji).cloned() {
+            Some(kanji) => {
+                let mut kk = kanji.clone();
+                match kanji_row.onyomi {
+                    Some(onyomi) => if !kk.onyomis.contains(&onyomi) {
+                        kk.onyomis.push(onyomi)
+                    },
+                    None => ()
+                }
+                match kanji_row.kunyomi {
+                    Some(kunyomi) => if !kk.kunyomis.contains(&kunyomi) {
+                        kk.kunyomis.push(kunyomi)
+                    },
+                    None => ()
+                }
+                kanjis.insert(kanji_row.kanji,kk);
+            },
+            None => {
+                let mut kk = quizlib::Kanji { kanji: kanji_row.kanji.clone(), onyomis: Vec::new(), kunyomis: Vec::new() };
+                match kanji_row.onyomi {
+                    Some(onyomi) => if !kk.onyomis.contains(&onyomi) {
+                        kk.onyomis.push(onyomi)
+                    },
+                    None => ()
+                }
+                match kanji_row.kunyomi {
+                    Some(kunyomi) => if !kk.kunyomis.contains(&kunyomi) {
+                        kk.kunyomis.push(kunyomi)
+                    },
+                    None => ()
+                }
+                kanjis.insert(kanji_row.kanji,kk);
+            }
+        }
+    }
+    kanjis.iter().map(|(_, kanji)| kanji.clone()).collect()
+}
+    
+fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
+    let mut stmt = conn.prepare("SELECT kanji.id, kanji.kanji, onyomi.onyomi, kunyomi.kunyomi, kunyomi.okurigana_index FROM kanji LEFT OUTER JOIN onyomi ON kanji.id = onyomi.kanji_id LEFT OUTER JOIN kunyomi ON kanji.id = kunyomi.kanji_id;
+").unwrap();
+    //let mut kanjis : HashMap <String, quizlib::Kanji> = HashMap::new();
+    let kanji_rows : Vec<KanjiRow> = stmt.query_map(&[], |row| {
+        KanjiRow {
+            id: row.get(0),
+            kanji: row.get(1),
+            onyomi:
+            match row.get_checked(2) {
+                Ok(s) => Some(s),
+                Err(_) => None,
+            },
+            kunyomi:
+            match row.get_checked(3) {
+                Ok(s) => match row.get_checked(4) {
+                    Ok(okurigana_index) => Some((s,Some(okurigana_index))),
+                    Err(_) => Some((s,None)),
+                },
+                Err(_) => None,
+            },
+        }
+    }).unwrap().map(|x| x.unwrap()).collect();
+    kanji_rows_to_kanjis(kanji_rows)
+        /*
     for kanji_row in kanji_rows {
         match kanjis.get(&kanji_row.kanji).cloned() {
             Some(kanji) => {
@@ -191,7 +283,7 @@ fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
                     None => ()
                 }
                 match kanji_row.kunyomi {
-                    Some(kunyomi) => kk.kunyomis.push(kunyomi.0),
+                    Some(kunyomi) => kk.kunyomis.push(kunyomi),
                     None => ()
                 }
                 kanjis.insert(kanji_row.kanji,kk);
@@ -203,7 +295,7 @@ fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
                     None => ()
                 }
                 match kanji_row.kunyomi {
-                    Some(kunyomi) => kk.kunyomis.push(kunyomi.0),
+                    Some(kunyomi) => kk.kunyomis.push(kunyomi),
                     None => ()
                 }
                 kanjis.insert(kanji_row.kanji,kk);
@@ -212,4 +304,5 @@ fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
     }
     
     kanjis.iter().map(|(_, kanji)| kanji.clone()).collect()
+*/
 }

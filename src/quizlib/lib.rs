@@ -8,9 +8,10 @@ use std::cmp::Ordering::{Equal,Greater,Less};
 pub struct Kanji {
     pub kanji: String,
     pub onyomis: Vec<String>,
-    pub kunyomis: Vec<String>    
+    pub kunyomis: Vec<(String,Option<u32>)>
 }
 
+/*
 pub fn get_kanji<P: AsRef<Path>>(file_name: P) -> Result<Vec<Kanji>> {
     let file = File::open(file_name).unwrap();
     let mut kanjis : Vec<Kanji> = vec![];
@@ -23,7 +24,7 @@ pub fn get_kanji<P: AsRef<Path>>(file_name: P) -> Result<Vec<Kanji>> {
     }
     Ok(kanjis)
 }
-
+*/
 pub fn is_hiragana(c: char) -> bool {
     c >= '\u{3040}' && c <= '\u{309F}'
 }

@@ -9,6 +9,19 @@ use std::fs::File;
 
 use rusqlite::types::Value::Null;
 
+fn split_okurigana(kunyomi: &str) -> (String, Option<u32>) {
+    match kunyomi.chars().position(|c| c == '・') {
+        Some(okurigana_index) => {
+            let split_on_dot : Vec<String> = kunyomi.split("・").map(|s| s.to_string()).collect();
+            let without_dot = split_on_dot.join("");
+            (without_dot.to_string(), Some(okurigana_index as u32))
+        },
+        None => {
+            (kunyomi.to_string(), None)
+        },
+    }
+}
+
 fn main() {
     let file = File::open("pronunciation.txt").unwrap();
     let mut kanjis : Vec<quizlib::Kanji> = vec![];
@@ -16,7 +29,7 @@ fn main() {
         let items =  line.unwrap();
         let v: Vec<&str> = items.split("|").collect();
         let onyomis: Vec<String> = v[1].split(",").map(|s| s.to_string()).filter(|s| s != "").collect();
-        let kunyomis: Vec<String> = v[2].split(",").map(|s| s.to_string()).filter(|s| s != "").collect();        
+        let kunyomis: Vec<(String,Option<u32>)> = v[2].split(",").map(|s| split_okurigana(s)).filter(|s| s.0 != "").collect();
         kanjis.push(quizlib::Kanji{kanji: v[0].to_owned(), onyomis: onyomis.to_owned(), kunyomis: kunyomis.to_owned()});
     }
 
@@ -49,22 +62,14 @@ fn main() {
             conn.execute("INSERT INTO onyomi (onyomi,kanji_id) VALUES (?1,?2)", &[&onyomi, &kanji_id]).unwrap();
         }
         for kunyomi in kanji.kunyomis {
-            let mut oi = 0;
-            //"Program".chars().position(|c| c == 'g').unwrap()
-            // kunyomi.find('・')
-            match kunyomi.chars().position(|c| c == '・') {
+            match kunyomi.1 {
                 Some(okurigana_index) => {
-                    let split_on_dot : Vec<String> = kunyomi.split("・").map(|s| s.to_string()).collect();
-                    let without_dot = split_on_dot.join("");
-                    oi = okurigana_index as u32;
-                    conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&without_dot, &oi, &kanji_id]).unwrap();
+                    conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&kunyomi.0, &okurigana_index, &kanji_id]).unwrap();
                 },
                 None => {
-                    conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&kunyomi, &Null, &kanji_id]).unwrap();
+                    conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&kunyomi.0, &Null, &kanji_id]).unwrap();
                 },
             }
-            // conn.execute("INSERT INTO kunyomi (kunyomi,okurigana_index,kanji_id) VALUES (?1,?2,?3)", &[&kunyomi, &Null, &kanji_id]).unwrap();
-            //conn.execute("INSERT INTO kunyomi (kunyomi,kanji_id) VALUES (?1,?2)", &[&kunyomi, &kanji_id]).unwrap();
         }
     }
 }
