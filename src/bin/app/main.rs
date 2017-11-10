@@ -57,18 +57,8 @@ fn main() {
 }
 
 fn learn_kanji(kanji: &quizlib::Kanji) {
-    /*
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock().into_raw_mode().unwrap();
-    write!(stdout, "{}{} onyomi: ",
-           // Clear the screen.
-           termion::clear::All,
-           kanji.kanji).unwrap();
-    
-    stdout.flush().unwrap();
-     */
     let mut t = term::stdout().unwrap();
-    println!("｢{}｣の音読み: ", kanji.kanji);
+    println!("｢{}｣の音読み: {}", kanji.kanji, kanji.onyomis.join("、"));
     
     for onyomi in kanji.onyomis.iter() {
         println!("{}", onyomi);
@@ -77,21 +67,27 @@ fn learn_kanji(kanji: &quizlib::Kanji) {
             t.reset().unwrap();
             let onyomi_read: String = read!("{}\n");
             if quizlib::romaji_to_katakana(onyomi_read.trim()) == onyomi.to_string() {
-                //print!("\r");
+                // move up and delete previous line
                 t.cursor_up();
                 t.delete_line();
+                // set to green
                 t.fg(term::color::BRIGHT_GREEN).unwrap();
                 println!("{} ✓", onyomi_read.trim());
+                // reset
                 t.reset().unwrap();
                 io::stdout().flush();
+                // increment correct counter
                 correct += 1;
             } else {
+                // move up and delete line
                 t.cursor_up();
                 t.delete_line();
+                // set to red
                 t.fg(term::color::BRIGHT_RED).unwrap();
-                io::stdout().flush();
                 println!("{} ×", onyomi_read.trim());
+                // reset
                 t.reset().unwrap();
+                io::stdout().flush();
             }
         }
     }
