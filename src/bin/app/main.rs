@@ -5,12 +5,17 @@ extern crate term;
 
 extern crate rand;
 extern crate rusqlite;
+extern crate termion;
 
 use rand::thread_rng;
 use rand::Rng;
 use rusqlite::Connection;
+use std::io;
 
 use std::collections::HashMap;
+
+use termion::raw::IntoRawMode;
+use std::io::Write;
 
 fn shuffle_copy<T: Clone>(vec: &[T]) -> Vec<T> {
     let mut newvec = vec.to_vec();
@@ -35,7 +40,7 @@ fn main() {
 //    let ks = get_kanji_with_okurigana(conn);
 
     println!("{:?}", kanjis);
-
+    
     for kanji in kanjis {
         learn_kanji(&kanji);
     }
@@ -52,18 +57,41 @@ fn main() {
 }
 
 fn learn_kanji(kanji: &quizlib::Kanji) {
-    println!("{} onyomi: ", kanji.kanji);
+    /*
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock().into_raw_mode().unwrap();
+    write!(stdout, "{}{} onyomi: ",
+           // Clear the screen.
+           termion::clear::All,
+           kanji.kanji).unwrap();
+    
+    stdout.flush().unwrap();
+     */
+    let mut t = term::stdout().unwrap();
+    println!("｢{}｣の音読み: ", kanji.kanji);
     
     for onyomi in kanji.onyomis.iter() {
         println!("{}", onyomi);
         let mut correct = 0;
-        while correct < 5 {
+        while correct < 3 {
+            t.reset().unwrap();
             let onyomi_read: String = read!("{}\n");
             if quizlib::romaji_to_katakana(onyomi_read.trim()) == onyomi.to_string() {
-                println!("✓");
+                //print!("\r");
+                t.cursor_up();
+                t.delete_line();
+                t.fg(term::color::BRIGHT_GREEN).unwrap();
+                println!("{} ✓", onyomi_read.trim());
+                t.reset().unwrap();
+                io::stdout().flush();
                 correct += 1;
             } else {
-                println!("×");
+                t.cursor_up();
+                t.delete_line();
+                t.fg(term::color::BRIGHT_RED).unwrap();
+                io::stdout().flush();
+                println!("{} ×", onyomi_read.trim());
+                t.reset().unwrap();
             }
         }
     }
