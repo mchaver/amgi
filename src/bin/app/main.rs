@@ -60,7 +60,10 @@ fn learn_kanji(kanji: &quizlib::Kanji) {
         while correct < 5 {
             let onyomi_read: String = read!("{}\n");
             if quizlib::romaji_to_katakana(onyomi_read.trim()) == onyomi.to_string() {
+                println!("✓");
                 correct += 1;
+            } else {
+                println!("×");
             }
         }
     }
