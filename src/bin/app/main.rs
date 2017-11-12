@@ -56,6 +56,55 @@ fn main() {
 */
 }
 
+fn index_split(s: &String, i: u32) -> (String,String) {
+    let mut first = "".to_string();
+    let mut second = "".to_string();
+    let mut ix = 0;
+    for c in s.chars().collect::<Vec<char>>().iter() {
+        if i > ix {
+            first.push(c.clone());
+        } else {
+            second.push(c.clone());
+        }
+        ix += 1;
+    }
+    (first,second)
+}
+
+fn utf8_split(s: &String, i: u32) {
+    let mut t = term::stdout().unwrap();
+    let mut ix = 0;
+    for c in s.chars().collect::<Vec<char>>().iter() {
+        if i == ix {
+            t.fg(term::color::GREEN).unwrap();
+        }
+        write!(t, "{}", c).unwrap();
+        ix += 1;
+    }
+    t.reset().unwrap();
+    io::stdout().flush();
+}
+
+fn print_kunyomis(kunyomis: Vec<(String,Option<u32>)>) {
+    let mut t = term::stdout().unwrap();
+
+    for kunyomi in kunyomis {
+        match kunyomi.1 {
+            Some(index) => {
+                utf8_split(&kunyomi.0, index);
+                /*
+                io::stdout().flush();
+                t.fg(term::color::GREEN).unwrap();
+                write!(t, "hello, ").unwrap();
+                t.reset().unwrap();
+                io::stdout().flush();
+*/
+            },
+            None => write!(t, "{}", kunyomi.0).unwrap(),
+        }
+    }
+}
+
 fn learn_kanji(kanji: &quizlib::Kanji) {
     let mut t = term::stdout().unwrap();
     println!("｢{}｣の音読み: {}", kanji.kanji, kanji.onyomis.join("、"));
@@ -92,6 +141,19 @@ fn learn_kanji(kanji: &quizlib::Kanji) {
         }
     }
 
+    //let s = kanji.kunyomis.iter().map(|o| o.0.clone()).collect::<Vec<String>>().join("、");
+    //println!("｢{}｣の訓読み: {}", kanji.kanji, s);
+    print!("｢{}｣の訓読み: ", kanji.kanji);
+    print_kunyomis(kanji.kunyomis.clone());
+    println!("");
+    // println!("｢{}｣の訓読み: {}", kanji.kanji, kanji.kunyomis.iter().map(|o: (String,Option<u32>)| o.0).collect::<Vec<String>>().join("、"));
+    
+    for kunyomi in kanji.kunyomis.iter() {
+        match kunyomi.1 {
+            Some(i) => {},
+            None => {},
+        }
+    }
 }
 
 fn print_kanji(kanji: &quizlib::Kanji) {
