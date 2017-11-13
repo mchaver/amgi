@@ -25,35 +25,12 @@ fn shuffle_copy<T: Clone>(vec: &[T]) -> Vec<T> {
 }
 //use rusqlite::Connection;
 fn main() {
-    let mut t = term::stdout().unwrap();
-
-    t.fg(term::color::BRIGHT_GREEN).unwrap();
-    write!(t, "hello, ").unwrap();
-
-    t.fg(term::color::BRIGHT_BLUE).unwrap();
-    writeln!(t, "world!").unwrap();
-
-    t.reset().unwrap();
-
     let conn = Connection::open("test.sql").unwrap();
     let kanjis = get_kanjis(conn);
-//    let ks = get_kanji_with_okurigana(conn);
-
-    println!("{:?}", kanjis);
-    
-    for kanji in kanjis {
+    let ks = shuffle_copy(&kanjis);    
+    for kanji in ks {
         learn_kanji(&kanji);
     }
-//    println!("{:?}", ks);
-/*    
-    let mkanjis = quizlib::get_kanji("pronunciation.txt");
-    let kanjis = mkanjis.unwrap();
-
-    let ks = shuffle_copy(&kanjis);
-    for k in ks.iter() {
-        quiz_kanji(k);
-    }
-*/
 }
 
 fn index_split(s: &String, i: u32) -> (String,String) {
@@ -88,19 +65,28 @@ fn utf8_split(s: &String, i: u32) {
 fn print_kunyomis(kunyomis: Vec<(String,Option<u32>)>) {
     let mut t = term::stdout().unwrap();
 
-    for kunyomi in kunyomis {
+    for (i, kunyomi) in kunyomis.iter().enumerate() {
         match kunyomi.1 {
             Some(index) => {
-                utf8_split(&kunyomi.0, index);
-                /*
-                io::stdout().flush();
+                let (first,second) = index_split(&kunyomi.0, index);
+
+                // write non-okurigana
+                write!(t, "{}", first).unwrap();
+
+                // write okurigana
                 t.fg(term::color::GREEN).unwrap();
-                write!(t, "hello, ").unwrap();
+                write!(t, "{}", second).unwrap();
+
+                // reset color
                 t.reset().unwrap();
                 io::stdout().flush();
-*/
             },
             None => write!(t, "{}", kunyomi.0).unwrap(),
+        }
+        
+        // add comma if not last
+        if i < kunyomis.len() - 1 {
+            write!(t, ",");
         }
     }
 }
@@ -149,9 +135,34 @@ fn learn_kanji(kanji: &quizlib::Kanji) {
     // println!("｢{}｣の訓読み: {}", kanji.kanji, kanji.kunyomis.iter().map(|o: (String,Option<u32>)| o.0).collect::<Vec<String>>().join("、"));
     
     for kunyomi in kanji.kunyomis.iter() {
-        match kunyomi.1 {
-            Some(i) => {},
-            None => {},
+        println!("{}", kunyomi.0);
+        let mut correct = 0;
+        while correct < 3 {
+            t.reset().unwrap();
+            let kunyomi_read: String = read!("{}\n");
+            if quizlib::romaji_to_hiragana(kunyomi_read.trim()) == kunyomi.0.to_string() {
+                // move up and delete previous line
+                t.cursor_up();
+                t.delete_line();
+                // set to green
+                t.fg(term::color::BRIGHT_GREEN).unwrap();
+                println!("{} ✓", kunyomi_read.trim());
+                // reset
+                t.reset().unwrap();
+                io::stdout().flush();
+                // increment correct counter
+                correct += 1;
+            } else {
+                // move up and delete line
+                t.cursor_up();
+                t.delete_line();
+                // set to red
+                t.fg(term::color::BRIGHT_RED).unwrap();
+                println!("{} ×", kunyomi_read.trim());
+                // reset
+                t.reset().unwrap();
+                io::stdout().flush();
+            }
         }
     }
 }
