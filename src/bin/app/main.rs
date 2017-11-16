@@ -406,3 +406,10 @@ fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
     kanjis.iter().map(|(_, kanji)| kanji.clone()).collect()
 */
 }
+
+// show kanji, reveal one pronunciation with each return
+fn review_kanjis(kanjis: &Vec<quizlib::Kanji>) {
+    for kanji in kanjis.iter() {
+        
+    }
+}
