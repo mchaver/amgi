@@ -11,11 +11,13 @@ use rand::thread_rng;
 use rand::Rng;
 use rusqlite::Connection;
 use std::io;
-
+use std::io::stdin;
 use std::collections::HashMap;
 
+use termion::event::{Key, Event};
 use termion::raw::IntoRawMode;
-use std::io::Write;
+use termion::input::TermRead;
+use std::io::{Read, Write};
 
 fn shuffle_copy<T: Clone>(vec: &[T]) -> Vec<T> {
     let mut newvec = vec.to_vec();
@@ -27,7 +29,8 @@ fn shuffle_copy<T: Clone>(vec: &[T]) -> Vec<T> {
 fn main() {
     let conn = Connection::open("test.sql").unwrap();
     let kanjis = get_kanjis(conn);
-    let ks = shuffle_copy(&kanjis);    
+    let ks = shuffle_copy(&kanjis);
+    // review_kanjis(&ks);
     for kanji in ks {
         learn_kanji(&kanji);
     }
@@ -62,6 +65,28 @@ fn utf8_split(s: &String, i: u32) {
     io::stdout().flush();
 }
 
+fn print_kunyomi(kunyomi: &(String,Option<u32>)) {
+    let mut t = term::stdout().unwrap();
+
+    match kunyomi.1 {
+        Some(index) => {
+            let (first,second) = index_split(&kunyomi.0, index);
+
+            // write non-okurigana
+            write!(t, "{}", first).unwrap();
+
+            // write okurigana
+            t.fg(term::color::GREEN).unwrap();
+            write!(t, "{}\n", second).unwrap();
+
+            // reset color
+            t.reset().unwrap();
+            io::stdout().flush();
+        },
+        None => write!(t, "{}\n", kunyomi.0).unwrap(),
+    }
+}
+
 fn print_kunyomis(kunyomis: Vec<(String,Option<u32>)>) {
     let mut t = term::stdout().unwrap();
 
@@ -94,14 +119,22 @@ fn print_kunyomis(kunyomis: Vec<(String,Option<u32>)>) {
 fn learn_kanji(kanji: &quizlib::Kanji) {
     let mut t = term::stdout().unwrap();
     println!("｢{}｣の音読み: {}", kanji.kanji, kanji.onyomis.join("、"));
-    
+    let mut skip_to_next = false;    
+
     for onyomi in kanji.onyomis.iter() {
         println!("{}", onyomi);
         let mut correct = 0;
-        while correct < 3 {
+        while correct < 3 && !skip_to_next {
             t.reset().unwrap();
             let onyomi_read: String = read!("{}\n");
-            if quizlib::romaji_to_katakana(onyomi_read.trim()) == onyomi.to_string() {
+
+            if onyomi_read.trim() == "\\n".to_string() {
+                skip_to_next = true;
+
+            } else if onyomi_read.trim() == "\\s".to_string() {
+                correct = 3;
+
+            } else if quizlib::romaji_to_katakana(onyomi_read.trim()) == onyomi.to_string() {
                 // move up and delete previous line
                 t.cursor_up();
                 t.delete_line();
@@ -113,6 +146,7 @@ fn learn_kanji(kanji: &quizlib::Kanji) {
                 io::stdout().flush();
                 // increment correct counter
                 correct += 1;
+
             } else {
                 // move up and delete line
                 t.cursor_up();
@@ -137,10 +171,17 @@ fn learn_kanji(kanji: &quizlib::Kanji) {
     for kunyomi in kanji.kunyomis.iter() {
         println!("{}", kunyomi.0);
         let mut correct = 0;
-        while correct < 3 {
+        while correct < 3 && !skip_to_next {
             t.reset().unwrap();
             let kunyomi_read: String = read!("{}\n");
-            if quizlib::romaji_to_hiragana(kunyomi_read.trim()) == kunyomi.0.to_string() {
+
+            if kunyomi_read.trim() == "\\n".to_string() {
+                skip_to_next = true;
+
+            } else if kunyomi_read.trim() == "\\s".to_string() {
+                correct = 3;
+
+            } else if quizlib::romaji_to_hiragana(kunyomi_read.trim()) == kunyomi.0.to_string() {
                 // move up and delete previous line
                 t.cursor_up();
                 t.delete_line();
@@ -409,7 +450,48 @@ fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
 
 // show kanji, reveal one pronunciation with each return
 fn review_kanjis(kanjis: &Vec<quizlib::Kanji>) {
+    let mut t = term::stdout().unwrap();
+    
     for kanji in kanjis.iter() {
+        println!("{}", kanji.kanji);
+        let _pause : String = read!("{}\n");
+        t.cursor_up();
+        t.delete_line();
         
+        for onyomi in kanji.onyomis.iter() {
+            println!("{}", onyomi);
+            let _inner_pause : String = read!("{}\n");
+            t.cursor_up();
+            t.delete_line();
+        }
+
+        for kunyomi in kanji.kunyomis.iter() {
+            print_kunyomi(&kunyomi);
+            let _inner_pause : String = read!("{}\n");
+            t.cursor_up();
+            t.delete_line();
+        }
+
+        println!("");
+        /*
+        loop {
+            let mut character = [0];
+            while let Ok(_) = stdin().read(&mut character) {
+                println!("CHAR {:?}", character[0] as char);
+                break;
+            }
+        }
+        */
+        /*
+        let stdin = stdin();
+        for c in stdin.events() {
+            println!("reading event");
+            let evt = c.unwrap();
+            match evt {
+                Event::Key(_key) => break,
+                _ => {}
+            }
+        }
+        */
     }
 }
