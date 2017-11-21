@@ -19,22 +19,79 @@ use termion::raw::IntoRawMode;
 use termion::input::TermRead;
 use std::io::{Read, Write};
 
+
 fn shuffle_copy<T: Clone>(vec: &[T]) -> Vec<T> {
     let mut newvec = vec.to_vec();
     let mut rng = thread_rng();
     rng.shuffle(&mut newvec);
     newvec
 }
+
+#[derive(Debug)]
+enum Mode {
+    Learn = 1,
+    Review,
+    Quiz,
+    Help,
+}
+
+fn input_to_mode(i: &str) -> Mode {
+    match i {
+        "1" => Mode::Learn,
+        "2" => Mode::Review,
+        "3" => Mode::Quiz,
+        "4" => Mode::Help,
+        _ => Mode::Help
+    }
+}
+
+const MAIN_MENU: &'static str = "1: Learn
+2: Review
+3: Quiz
+4: Help";
+
+/*
+quit \q
+main menu \m
+next \n
+*/
+
 //use rusqlite::Connection;
 fn main() {
     let conn = Connection::open("test.sql").unwrap();
     let kanjis = get_kanjis(conn);
     let ks = shuffle_copy(&kanjis);
-    // review_kanjis(&ks);
-    for kanji in ks {
-        learn_kanji(&kanji);
+
+    // read_string(&pprint);
+    
+    println!("{}", MAIN_MENU);
+    let mode_read : String = read!("{}\n");
+    let mode = input_to_mode(&mode_read.trim());
+    // println!("{:?}", mode);
+    main_menu_select(mode, &ks);
+
+}
+
+fn pprint(s: &str) {
+    println!("{}", s);
+}
+
+fn read_string(f: &Fn(&str)) {
+    let input : String = read!("{}\n");
+    f(&input);
+}
+
+fn main_menu_select(mode: Mode, kanjis: &Vec<quizlib::Kanji>) {
+    match mode {
+        Mode::Learn => for kanji in kanjis { learn_kanji(&kanji); } ,
+        Mode::Review => review_kanjis(&kanjis) ,
+        Mode::Quiz => for kanji in kanjis { quiz_kanji(&kanji); },
+        Mode::Help => println!(""),
     }
 }
+
+// quiz: review mistakes
+
 
 fn index_split(s: &String, i: u32) -> (String,String) {
     let mut first = "".to_string();
@@ -118,7 +175,7 @@ fn print_kunyomis(kunyomis: Vec<(String,Option<u32>)>) {
 
 fn learn_kanji(kanji: &quizlib::Kanji) {
     let mut t = term::stdout().unwrap();
-    println!("｢{}｣の音読み: {}", kanji.kanji, kanji.onyomis.join("、"));
+    println!("｢{}｣の音読み: {}\n", kanji.kanji, kanji.onyomis.join("、"));
     let mut skip_to_next = false;    
 
     for onyomi in kanji.onyomis.iter() {
@@ -126,85 +183,89 @@ fn learn_kanji(kanji: &quizlib::Kanji) {
         let mut correct = 0;
         while correct < 3 && !skip_to_next {
             t.reset().unwrap();
-            let onyomi_read: String = read!("{}\n");
+            let onyomi_read_dirty: String = read!("{}\n");
+            let onyomi_read = onyomi_read_dirty.trim();
 
-            if onyomi_read.trim() == "\\n".to_string() {
+            if onyomi_read == "\\q".to_string() {
+                std::process::exit(0);
+                
+            } else if onyomi_read == "\\n".to_string() {
                 skip_to_next = true;
 
-            } else if onyomi_read.trim() == "\\s".to_string() {
+            } else if onyomi_read == "\\s".to_string() {
                 correct = 3;
 
-            } else if quizlib::romaji_to_katakana(onyomi_read.trim()) == onyomi.to_string() {
+            } else {
+                let onyomis: Vec<String> = onyomi_read.split_whitespace().map(|s| s.to_string()).collect();
                 // move up and delete previous line
                 t.cursor_up();
                 t.delete_line();
-                // set to green
-                t.fg(term::color::BRIGHT_GREEN).unwrap();
-                println!("{} ✓", onyomi_read.trim());
-                // reset
-                t.reset().unwrap();
-                io::stdout().flush();
-                // increment correct counter
-                correct += 1;
 
-            } else {
-                // move up and delete line
-                t.cursor_up();
-                t.delete_line();
-                // set to red
-                t.fg(term::color::BRIGHT_RED).unwrap();
-                println!("{} ×", onyomi_read.trim());
-                // reset
-                t.reset().unwrap();
-                io::stdout().flush();
+                for o in onyomis {
+                    if quizlib::romaji_to_katakana(&o) == onyomi.to_string() {
+                        t.fg(term::color::BRIGHT_GREEN).unwrap();
+                        print!("{} ✓ ", o);
+                        // increment correct counter
+                        correct += 1;
+                    } else {
+                        t.fg(term::color::BRIGHT_RED).unwrap();
+                        print!("{} × ", o);
+                    }
+                    t.reset().unwrap();
+                    io::stdout().flush();
+                }
+                println!();
             }
         }
+
+        println!();
     }
 
-    //let s = kanji.kunyomis.iter().map(|o| o.0.clone()).collect::<Vec<String>>().join("、");
-    //println!("｢{}｣の訓読み: {}", kanji.kanji, s);
     print!("｢{}｣の訓読み: ", kanji.kanji);
     print_kunyomis(kanji.kunyomis.clone());
-    println!("");
-    // println!("｢{}｣の訓読み: {}", kanji.kanji, kanji.kunyomis.iter().map(|o: (String,Option<u32>)| o.0).collect::<Vec<String>>().join("、"));
+    println!("\n");
     
     for kunyomi in kanji.kunyomis.iter() {
         println!("{}", kunyomi.0);
         let mut correct = 0;
         while correct < 3 && !skip_to_next {
             t.reset().unwrap();
-            let kunyomi_read: String = read!("{}\n");
+            let kunyomi_read_dirty: String = read!("{}\n");
+            let kunyomi_read = kunyomi_read_dirty.trim();
 
-            if kunyomi_read.trim() == "\\n".to_string() {
+            if kunyomi_read == "\\q".to_string() {
+                std::process::exit(0);
+                
+            } else if kunyomi_read == "\\n".to_string() {
                 skip_to_next = true;
 
-            } else if kunyomi_read.trim() == "\\s".to_string() {
+            } else if kunyomi_read == "\\s".to_string() {
                 correct = 3;
 
-            } else if quizlib::romaji_to_hiragana(kunyomi_read.trim()) == kunyomi.0.to_string() {
+            } else {
+                let kunyomis: Vec<String> = kunyomi_read.split_whitespace().map(|s| s.to_string()).collect();
                 // move up and delete previous line
                 t.cursor_up();
                 t.delete_line();
-                // set to green
-                t.fg(term::color::BRIGHT_GREEN).unwrap();
-                println!("{} ✓", kunyomi_read.trim());
-                // reset
-                t.reset().unwrap();
-                io::stdout().flush();
-                // increment correct counter
-                correct += 1;
-            } else {
-                // move up and delete line
-                t.cursor_up();
-                t.delete_line();
-                // set to red
-                t.fg(term::color::BRIGHT_RED).unwrap();
-                println!("{} ×", kunyomi_read.trim());
-                // reset
-                t.reset().unwrap();
-                io::stdout().flush();
+
+                for k in kunyomis {
+                    if quizlib::romaji_to_hiragana(&k) == kunyomi.0.to_string() {
+                        t.fg(term::color::BRIGHT_GREEN).unwrap();
+                        print!("{} ✓ ", k);
+                        // increment correct counter
+                        correct += 1;
+                    } else {
+                        t.fg(term::color::BRIGHT_RED).unwrap();
+                        print!("{} × ", k);
+                    }
+                    t.reset().unwrap();
+                    io::stdout().flush();
+                }
+                println!();
             }
         }
+
+        println!();
     }
 }
 
