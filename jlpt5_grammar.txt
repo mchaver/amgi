@@ -1,0 +1,70 @@
+v/adj-i/adj-na/n
+u dictionary
+a negative 未然形
+i connective 連用形
+u 終止形
+e 已然形/仮定形
+o 命令形
+s stem
+p phrase
+
+だ|to be,copula||それは非常に面白いコメントですね。/That's a very interesting comment.;コンサート・ピアニストになりたいという夢は終わった、という気分でした。/I felt that my dream of becoming a concert pianist was over.;最初からずっと、サッカーが好きでしたね。ごく自然にそうなりました。/I've loved football ever since day one. It just came so naturally.;自分がしたいことは何でもする、積極的な子でした。/I was a positive child. I did whatever I wanted to.;客たちの期待は裏切られず、まことに楽しい宴会でした。/The guests were not disappointed: they had a very pleasant feast.
+だけ|only,just||u/i/s/s
+だろう|probably||u/i/s/s
+で|at,in||///s
+で|with,by||///s
+でしょう|I think,probably
+です|to be,copula
+が|subject marker||///p
+が|but,however||///p
+がある|there is (used for non-living things)||お金がありません。/I have no money.;あなたの鞄はテーブルの上にある。/You bag is on the table.;質問がありますか？/Do you have any questions?;彼に家が二軒あります。/He has two house.;このアパートにはルームが二つあります。/This aparment has two rooms.;言いたいことがありますか？/Is there anything you want to say?;日本に大好きなことはあります。/There are things that I love about Japan.;彼女の中には周りの人々に軽い緊張感を呼び起こす何かがあったのだ。/Something about her made other people a bit tense.;なぜこんなものが鞄の中にあるんだ！/Why do you have these in your bag?;この引き出しに仕掛けがある。/There's a secret spring in this drawer.;私はいささか医学の心得もあります。/I have some medical knowledge.,穏やかな表面のすぐ下にはパニックがあった。/Panic lay just beneath the surface.;私には良心を苦しめるものがあるのだ。/I have a heavy burden upon my conscience.
+がいる|there is (used for living things)||
+ほうがいい|it'd be better to
+ほうがいい|it'd be better to not
+いちばん|the most
+か|or,A or B,choice between two objects
+か|question particle
+から|because,since
+から|from
+けれども|but,although
+くらい|about,approximately
+～すぎる
+まだ|still,not yet
+まだ～ていません|still has not||私はまだ決めていません/I haven't decided yet.,彼はまだ帰ってません./He still hasn't come back yet.
+まで|until,till,to,even
+まえに|before
+～ませんか|let's,won't you
+～ましょう|let's,shall we
+も|also,too,as well
+もう|already,anymore
+な|don't do
+～ないでください|please don't|n:ないでください///|
+なくちゃいけない|
+なる|to become
+に|in,at,to,for
+に|to
+へ|to
+にいく|to go in order to
+にする|to decide on
+の|of,indicate possessive
+の|verb nominalizer
+のがじょうず|to be good at
+のがすき|like doing
+のがへた|to be bad at
+ので|because,so
+すぎる|too much
+たい|want to
+たことがある|have done before
+～たり～たりする|list of activities or attributes
+～ている|is doing
+～てください|please do
+～てもいい|is okay,is alright to,can
+～てから|after doing
+～てはいけない|must not,may not
+と|and,with
+つもりだ|plan to,intend to
+や|and
+～のほうが～より
+より～のほうが～|is more ~ than ~
+んです|soften a request
+を|direct object

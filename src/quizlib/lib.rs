@@ -6,6 +6,7 @@ use std::cmp::Ordering::{Equal,Greater,Less};
 
 #[derive(Clone,Debug)]
 pub struct Kanji {
+    pub id: i32,
     pub kanji: String,
     pub onyomis: Vec<String>,
     pub kunyomis: Vec<(String,Option<u32>)>

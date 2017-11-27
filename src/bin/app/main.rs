@@ -60,13 +60,15 @@ next \n
 fn main() {
     let conn = Connection::open("test.sql").unwrap();
     let kanjis = get_kanjis(conn);
+    print_kanji_chart(&kanjis);
     let ks = shuffle_copy(&kanjis);
 
     // read_string(&pprint);
-    
+
     println!("{}", MAIN_MENU);
     let mode_read : String = read!("{}\n");
     let mode = input_to_mode(&mode_read.trim());
+    println!();
     // println!("{:?}", mode);
     main_menu_select(mode, &ks);
 
@@ -76,6 +78,19 @@ fn pprint(s: &str) {
     println!("{}", s);
 }
 
+fn print_kanji_chart(kanjis: &Vec<quizlib::Kanji>) {
+    let mut i = 0;
+    for kanji in kanjis {
+        i += 1;
+        print!("{}", kanji.kanji);
+        if i > 9 {
+            println!();
+            i = 0;
+        }
+    }
+}
+
+
 fn read_string(f: &Fn(&str)) {
     let input : String = read!("{}\n");
     f(&input);
@@ -83,8 +98,8 @@ fn read_string(f: &Fn(&str)) {
 
 fn main_menu_select(mode: Mode, kanjis: &Vec<quizlib::Kanji>) {
     match mode {
-        Mode::Learn => for kanji in kanjis { learn_kanji(&kanji); } ,
-        Mode::Review => review_kanjis(&kanjis) ,
+        Mode::Learn => for kanji in kanjis { learn_kanji(&kanji); },
+        Mode::Review => review_kanjis(&kanjis),
         Mode::Quiz => for kanji in kanjis { quiz_kanji(&kanji); },
         Mode::Help => println!(""),
     }
@@ -289,8 +304,12 @@ fn print_kanji(kanji: &quizlib::Kanji) {
     t.reset().unwrap();
 }
 
+// random, range
+// x pronunciations less above equal
+// repeat mistaken one
+
 fn quiz_kanji(kanji: &quizlib::Kanji) {
-    println!("{} onyomi: ", kanji.kanji);
+    println!("{} 音読み: ", kanji.kanji);
     
     let onyomi_read: String = read!("{}\n");
     let onyomi_answers: Vec<String> = onyomi_read.trim().split_whitespace().map(|s| quizlib::romaji_to_katakana(s)).collect();
@@ -308,7 +327,7 @@ fn quiz_kanji(kanji: &quizlib::Kanji) {
         }
     }
 
-    println!("{} kunyomi: ", kanji.kanji);
+    println!("{} 訓読み: ", kanji.kanji);
     
     let kunyomi_read: String = read!("{}\n");
     let kunyomi_answers: Vec<String> = kunyomi_read.trim().split_whitespace().map(|s| quizlib::romaji_to_hiragana(s)).collect();
@@ -340,20 +359,26 @@ fn quiz_kanji(kanji: &quizlib::Kanji) {
 
     if correct.len() > 0 {
         t.fg(term::color::BRIGHT_GREEN).unwrap();
-        writeln!(t, "{}", correct.join(",")).unwrap();
+        writeln!(t, "正解：{}", correct.join(",")).unwrap();
     }
 
     if incorrect.len() > 0 {
         t.fg(term::color::BRIGHT_RED).unwrap();
-        writeln!(t, "{}", incorrect.join(",")).unwrap();
+        writeln!(t, "不正解：{}", incorrect.join(",")).unwrap();
     }
 
     if missed.len() > 0 {
         t.fg(term::color::BRIGHT_YELLOW).unwrap();
-        writeln!(t, "{}", missed.join(",")).unwrap();
+        writeln!(t, "未入力：{}", missed.join(",")).unwrap();
     }
+
+    println!();
     
     t.reset().unwrap();
+
+    if incorrect.len() > 0 || missed.len() > 0 {
+        quiz_kanji(kanji);
+    }
 }
 
 /*
@@ -431,7 +456,7 @@ fn kanji_rows_to_kanjis(kanji_rows: Vec<KanjiRow>) -> Vec<quizlib::Kanji> {
                 kanjis.insert(kanji_row.kanji,kk);
             },
             None => {
-                let mut kk = quizlib::Kanji { kanji: kanji_row.kanji.clone(), onyomis: Vec::new(), kunyomis: Vec::new() };
+                let mut kk = quizlib::Kanji { id: kanji_row.id, kanji: kanji_row.kanji.clone(), onyomis: Vec::new(), kunyomis: Vec::new() };
                 match kanji_row.onyomi {
                     Some(onyomi) => if !kk.onyomis.contains(&onyomi) {
                         kk.onyomis.push(onyomi)
@@ -448,7 +473,11 @@ fn kanji_rows_to_kanjis(kanji_rows: Vec<KanjiRow>) -> Vec<quizlib::Kanji> {
             }
         }
     }
-    kanjis.iter().map(|(_, kanji)| kanji.clone()).collect()
+    //v.sort_by(|a, b| a.cmp(b));
+    //kanjis.sort_by(|a, b| a.id.cmp(b.id));
+    let mut val : Vec<quizlib::Kanji> = kanjis.iter().map(|(_, kanji)| kanji.clone()).collect();
+    val.sort_by(|a, b| a.id.cmp(&b.id));
+    val
 }
     
 fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
@@ -510,6 +539,7 @@ fn get_kanjis(conn: Connection) -> Vec<quizlib::Kanji> {
 }
 
 // show kanji, reveal one pronunciation with each return
+
 fn review_kanjis(kanjis: &Vec<quizlib::Kanji>) {
     let mut t = term::stdout().unwrap();
     
@@ -534,25 +564,5 @@ fn review_kanjis(kanjis: &Vec<quizlib::Kanji>) {
         }
 
         println!("");
-        /*
-        loop {
-            let mut character = [0];
-            while let Ok(_) = stdin().read(&mut character) {
-                println!("CHAR {:?}", character[0] as char);
-                break;
-            }
-        }
-        */
-        /*
-        let stdin = stdin();
-        for c in stdin.events() {
-            println!("reading event");
-            let evt = c.unwrap();
-            match evt {
-                Event::Key(_key) => break,
-                _ => {}
-            }
-        }
-        */
     }
 }

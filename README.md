@@ -15,3 +15,9 @@ cargo test
 ## Useful questions
 
 - [Multiple binaries](https://stackoverflow.com/questions/36604010/how-can-i-build-multiple-binaries-with-cargo)
+
+
+## tsv
+
+columns:
+- Kanji, Kana, English, POS, 2ndDef, OtherDef, Tags
